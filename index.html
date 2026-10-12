@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkillMitra – AI-Powered Personalized Learning & Career Readiness Platform</title>
+<meta name="description" content="SkillMitra analyzes your skills, identifies your gaps and creates a personalized path from learning to career readiness.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app/styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232448D8'/%3E%3Ccircle cx='10' cy='10.5' r='3.2' fill='white'/%3E%3Cpath d='M7 24.5h6.5v-5H19v-5h6' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="app/data.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="app/ui.jsx"></script>
+<script type="text/babel" src="app/shell.jsx"></script>
+<script type="text/babel" src="app/public.jsx"></script>
+<script type="text/babel" src="app/student1.jsx"></script>
+<script type="text/babel" src="app/student2.jsx"></script>
+<script type="text/babel" src="app/partners.jsx"></script>
+<script type="text/babel">
+function parse(full){
+  const [p, qs=''] = full.split('?');
+  const query = Object.fromEntries(new URLSearchParams(qs));
+  return { p: p.replace(/\/+$/,'') || '/', query };
+}
+function App(){
+  const full = useRoute();
+  const { state, update } = useStore();
+  const { p, query } = parse(full);
+
+  // public routes
+  if (p === '/') return <Landing/>;
+  if (p === '/login') return <Login variant="student"/>;
+  if (p === '/institution-login') return <Login variant="institution"/>;
+  if (p === '/industry-login') return <Login variant="industry"/>;
+  if (p === '/switch') return <Switch/>;
+  if (p === '/onboarding') { if (!state.auth) { setTimeout(()=>go('/login')); return null; } return <Onboarding/>; }
+
+  // partner workspaces
+  if (p.startsWith('/institution')) {
+    if (state.auth !== 'institution') return <Login variant="institution"/>;
+    return <AppShell path={p} mode="institution"><Institution/></AppShell>;
+  }
+  if (p.startsWith('/industry') && !p.startsWith('/industry-skills')) {
+    if (state.auth !== 'industry') return <Login variant="industry"/>;
+    return <AppShell path={p} mode="industry"><Industry/></AppShell>;
+  }
+
+  // student app — guard
+  if (state.auth !== 'student') return <Login variant="student"/>;
+
+  let page;
+  const seg = p.split('/').filter(Boolean);
+  switch (seg[0]) {
+    case 'dashboard': page = <Dashboard/>; break;
+    case 'analysis': page = <Analysis query={query}/>; break;
+    case 'skill-gaps': page = <SkillGaps/>; break;
+    case 'learning': case 'roadmap': page = seg[1] ? <Resources topic={seg[1]}/> : <Roadmap/>; break;
+    case 'projects': page = seg[1] ? <ProjectDetail id={seg[1]}/> : <Projects/>; break;
+    case 'assessment': page = <Assessment/>; break;
+    case 'career-readiness': page = <CareerReadiness/>; break;
+    case 'industry-skills': page = <IndustrySkills/>; break;
+    case 'profile': page = <Profile tab="profile"/>; break;
+    case 'settings': page = <Profile tab="settings"/>; break;
+    case 'ask': setTimeout(()=>{ window.dispatchEvent(new CustomEvent('sm:ask')); go('/dashboard'); }); page = <Dashboard/>; break;
+    default: page = <NotFound/>;
+  }
+  return <AppShell path={full}>{page}</AppShell>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<StoreProvider><App/></StoreProvider>);
+</script>
+</body>
+</html>
